@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Locadora de Automóveis</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #2c3e50; color: white; padding: 20px; text-align: center; }
+        .nav { background: #34495e; padding: 10px; }
+        .nav button { background: #3498db; color: white; border: none; padding: 10px 20px; margin: 0 5px; cursor: pointer; border-radius: 5px; }
+        .nav button:hover { background: #2980b9; }
+        .section { background: white; padding: 20px; margin: 20px 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; }
+        form { display: grid; gap: 10px; max-width: 400px; }
+        input, button { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #27ae60; color: white; border: none; cursor: pointer; }
+        button:hover { background: #219a52; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🚗 Locadora de Automóveis</h1>
+    </header>
+
+    <div class="nav">
+        <div class="container">
+            <button onclick="showSection('veiculos')">Veículos</button>
+            <button onclick="showSection('clientes')">Clientes</button>
+            <button onclick="showSection('locacoes')">Locações</button>
+            <button onclick="showSection('nova-locacao')">Nova Locação</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Veículos -->
+        <div id="veiculos" class="section">
+            <h2>Veículos Disponíveis</h2>
+            <button onclick="carregarVeiculos()">Atualizar Lista</button>
+            <div id="lista-veiculos"></div>
+        </div>
+
+        <!-- Clientes -->
+        <div id="clientes" class="section hidden">
+            <h2>Clientes Cadastrados</h2>
+            <button onclick="carregarClientes()">Atualizar Lista</button>
+            <div id="lista-clientes"></div>
+        </div>
+
+        <!-- Locações -->
+        <div id="locacoes" class="section hidden">
+            <h2>Locações Ativas</h2>
+            <div id="lista-locacoes"></div>
+        </div>
+
+        <!-- Nova Locação -->
+        <div id="nova-locacao" class="section hidden">
+            <h2>Nova Locação</h2>
+            <form onsubmit="fazerLocacao(event)">
+                <input type="text" id="cliente_id" placeholder="ID do Cliente" required>
+                <input type="text" id="veiculo_id" placeholder="ID do Veículo" required>
+                <input type="date" id="data_inicio" required>
+                <input type="date" id="data_fim" required>
+                <button type="submit">Realizar Locação</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Mostrar seção
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        // Carregar veículos
+        async function carregarVeiculos() {
+            const response = await fetch('/api/veiculos');
+            const veiculos = await response.json();
+            
+            const html = `
+                <table>
+                    <tr>
+                        <th>ID</th><th>Marca</th><th>Modelo</th><th>Ano</th><th>Placa</th><th>Cor</th><th>Preço/Dia</th>
+                    </tr>
+                    ${veiculos.map(veiculo => `
+                        <tr>
+                            <td>${veiculo.id}</td>
+                            <td>${veiculo.marca}</td>
+                            <td>${veiculo.modelo}</td>
+                            <td>${veiculo.ano}</td>
+                            <td>${veiculo.placa}</td>
+                            <td>${veiculo.cor}</td>
+                            <td>R$ ${veiculo.preco_diaria}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            `;
+            
+            document.getElementById('lista-veiculos').innerHTML = html;
+        }
+
+        // Carregar clientes
+        async function carregarClientes() {
+            const response = await fetch('/api/clientes');
+            const clientes = await response.json();
+            
+            const html = `
+                <table>
+                    <tr><th>ID</th><th>Nome</th><th>CPF</th><th>Email</th><th>Telefone</th></tr>
+                    ${clientes.map(cliente => `
+                        <tr>
+                            <td>${cliente.id}</td>
+                            <td>${cliente.nome}</td>
+                            <td>${cliente.cpf}</td>
+                            <td>${cliente.email}</td>
+                            <td>${cliente.telefone}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+            `;
+            
+            document.getElementById('lista-clientes').innerHTML = html;
+        }
+
+        // Fazer locação
+        async function fazerLocacao(event) {
+            event.preventDefault();
+            
+            const locacao = {
+                cliente_id: document.getElementById('cliente_id').value,
+                veiculo_id: document.getElementById('veiculo_id').value,
+                data_inicio: document.getElementById('data_inicio').value,
+                data_fim: document.getElementById('data_fim').value
+            };
+            
+            const response = await fetch('/api/locacoes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(locacao)
+            });
+            
+            const result = await response.json();
+            alert(result.message || result.error);
+            
+            if (response.ok) {
+                event.target.reset();
+                carregarVeiculos();
+            }
+        }
+
+        // Carregar dados iniciais
+        carregarVeiculos();
+        showSection('veiculos');
+    </script>
+</body>
+</html>
